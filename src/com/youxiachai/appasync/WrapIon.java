@@ -1,6 +1,7 @@
 package com.youxiachai.appasync;
 
 import android.content.Context;
+import android.util.Log;
 import android.widget.ImageView;
 
 import com.alibaba.fastjson.JSON;
@@ -27,7 +28,6 @@ public class WrapIon<T> {
 	
     private T mType;
 
-
 	public WrapIon (String url,Context ctx,T type) {
 		this.mUrl = url;
 		this.mContext = ctx;
@@ -39,12 +39,9 @@ public class WrapIon<T> {
 	
 	private DataRequest mDataRequest = null;
 	
-	
 	private DataError mDataError = null;
 	
-	
     private DataEnd<T> mDataEnd = null;
-	
 	
 	public WrapIon<T> onHeaders(DataResHeaders callback){
 		this.mDataResHeaders = callback;
@@ -55,7 +52,6 @@ public class WrapIon<T> {
 		this.mDataRequest = callback;
 		return this;
 	}
-	
 	
 	
 	public WrapIon<T> onEnd(DataEnd<T> apiend){
@@ -86,7 +82,7 @@ public class WrapIon<T> {
 						@Override
 						public void onCompleted(Exception e, Response<String> response) {
 							
-							if(e != null){
+							if(e != null && that.mDataError != null){
 								that.mDataError.onError(e);
 								return;
 							}
@@ -189,20 +185,21 @@ public class WrapIon<T> {
 				.load(mUrl)
 				.as(parse);
 				
-		
 		responseFuture.setCallback(new FutureCallback<T>() {
 
 			@Override
 			public void onCompleted(Exception arg0, T arg1) {
-				// TODO Auto-generated method stub
-				dataEnd.onEnd(arg1);
+				
+				if(dataEnd != null) {
+					dataEnd.onEnd(arg1);
+				}
+				
 			}
 		});
 		
 		return this;
 	}
 	
-
 
 	/**进行流处理
 	 * @param ctx
@@ -212,7 +209,11 @@ public class WrapIon<T> {
 		pipe();
 		return this;
 	}
-
-
-
+	
+	/**open debug
+	 * @param logTag
+	 */
+	public void setLogging(String logTag){
+		Ion.getDefault(mContext).configure().setLogging(logTag, Log.DEBUG);
+	}
 }

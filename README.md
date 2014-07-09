@@ -1,1 +1,1 @@
-It is sample and pettry api design android framework. 
+It is sample and pretty design;

@@ -193,7 +193,6 @@ public class WrapIon<T> {
 				if(dataEnd != null) {
 					dataEnd.onEnd(arg1);
 				}
-				
 			}
 		});
 		

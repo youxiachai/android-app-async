@@ -6,6 +6,7 @@ import android.widget.ImageView;
 
 import com.alibaba.fastjson.JSON;
 import com.koushikdutta.async.future.FutureCallback;
+import com.koushikdutta.async.http.libcore.RawHeaders;
 import com.koushikdutta.async.parser.AsyncParser;
 import com.koushikdutta.ion.Ion;
 import com.koushikdutta.ion.Response;
@@ -27,6 +28,8 @@ public class WrapIon<T> {
     private Context mContext;
 	
     private T mType;
+    
+    private B mBuilder = null;
 
 	public WrapIon (String url,Context ctx,T type) {
 		this.mUrl = url;
@@ -42,6 +45,8 @@ public class WrapIon<T> {
 	private DataError mDataError = null;
 	
     private DataEnd<T> mDataEnd = null;
+    
+    private ApiAuthHandler mAuthHandler = null;
 	
 	public WrapIon<T> onHeaders(DataResHeaders callback){
 		this.mDataResHeaders = callback;
@@ -128,13 +133,26 @@ public class WrapIon<T> {
 						@Override
 						public void onCompleted(Exception e, Response<String> response) {
 							
+							RawHeaders headers = response.getHeaders();
+						
+							
+							if(headers != null && mAuthHandler != null){
+								//进行验证校验是否过期判断 让开发者自己实现逻辑
+								if(mAuthHandler.expired(headers)){
+									//过期了,终止下面的行为
+									return;
+								}
+							}
+							
+							
 							if(e != null){
 								that.mDataError.onError(e);
 								return;
 							}
 							
+							
 							if(that.mDataResHeaders != null) {
-								that.mDataResHeaders.onHeaders(response.getHeaders());
+								that.mDataResHeaders.onHeaders(headers);
 							}
 							
 							if(that.mDataRequest != null) {
@@ -157,19 +175,27 @@ public class WrapIon<T> {
 	 * @return
 	 */
 	public WrapIon<T> pipe() {
-		B builder = Ion.with(mContext)
-				.load(mUrl);
+		if(mBuilder == null) {
+			 mBuilder = Ion.with(mContext)
+						.load(mUrl);
+		}
+		
+		if(mAuthHandler != null && !mAuthHandler.authenticated(mBuilder)){
+			//没有授权执行授权方法
+			mAuthHandler.auth();
+			return this;
+		}
+		
 	
 		if(mType instanceof String){
 			
-			return handleString(builder);
-		
+			return handleString(mBuilder);
 		}else if(mType instanceof ImageView){
 			
-			return handleImageView(builder);
-			
+			return handleImageView(mBuilder);
 		} else {
-			return handleObject(builder);
+			
+			return handleObject(mBuilder);
 		}
 	
 	}
@@ -195,6 +221,26 @@ public class WrapIon<T> {
 				}
 			}
 		});
+		
+		return this;
+	}
+	
+//	public WrapIon<T> pipe()
+	
+	/**设置授权逻辑
+	 * @param authHandler
+	 * @return
+	 */
+	public WrapIon<T> pipe(ApiAuthHandler authHandler){
+		if(mBuilder == null) {
+			 mBuilder = Ion.with(mContext)
+						.load(mUrl);
+		}
+		
+//		mBuilder.
+		
+		this.mAuthHandler = authHandler;
+		
 		
 		return this;
 	}
